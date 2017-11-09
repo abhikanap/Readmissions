@@ -75,9 +75,14 @@ The next sep is to check the accuracy of the model.
 
 ```{r, message=FALSE, warning=FALSE}
 targetVar = ifelse(rad.raw$READMIT == "YES", 1, 0)
-misClassError(targetVar, predictions, threshold = optCutOff)
+print(paste("Mis-Class error is :",misClassError(targetVar, predictions, threshold = optCutOff)))
 plotROC(targetVar, predictions)
 sensitivity(targetVar, predictions, threshold = optCutOff)
 specificity(targetVar, predictions, threshold = optCutOff)
+```
+
+```{r, message=FALSE, warning=FALSE}
+predicteds = ifelse(predictions > optCutOff, 1, 0)
+ks_plot(actuals=targetVar, predictedScores=predicteds)
 ```
 
