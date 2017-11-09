@@ -1,0 +1,83 @@
+---
+title: "Re-Admissions Analysis"
+author: "Kathleen Sheehan & Abhishek Kanaparthi"
+date: "November 8, 2017"
+output: html_document
+---
+The following document elucidates about the in-depth analysis of the Re-Admissions Data and tries to find out the most important factors that are contributing for the Re-admission and also for finding patterns in the data, that will help reduce the number of re-admits.
+
+```{r, message=FALSE, warning=FALSE}
+library(readr)
+readmitsV1 <- read_csv("R:/People's Projects/Kathleen Sheehan Projects/Data/readmitsV1.csv")
+```
+
+Now as the data has been imported, we can go ahead and start working on the dataset with the basic filtering part of it.
+
+```{r}
+optional = c(1,2,4,6,7,8,9,10,18,19,41)
+group1 = c(20,21,22,23,24,25,26,27,28,29,30,31,32,33)
+group2 = c(34,35,36,37,38,39)
+
+rad1= readmitsV1[optional] # Building the dataset with the most important columns only
+rad2= readmitsV1[group1]
+rad3= readmitsV1[group2]
+
+target = readmitsV1[3] # Storing the Target Variable
+
+# Making a new Data Frame with only the desired varirables
+rad.raw = cbind(target,rad1,rad2,rad3)
+```
+
+As the data has been designed now, the next step is to check the structure of the data.
+
+```{r}
+str(rad.raw)
+summary(rad.raw)
+```
+
+The next step is to convert the ones with the categorical data into factors.
+
+```{r}
+library(tidyverse)
+library(magrittr)
+library(dplyr)
+library(plyr)
+
+cols=c(1:6,8:10,13:26,28:32)
+rad.raw %<>% mutate_at(cols, funs(factor(.)))
+```
+
+As we have changed the type of the variables now, we can go ahead and check the datatype now again.
+
+```{r}
+str(rad.raw)
+summary(rad.raw)
+```
+
+The next step is to work on using one group of variables alone to do the analysis and then the next.
+
+###Optional Group###
+
+```{r}
+predictors = c(1, 2:4, 6:11)
+logit1 = glm(data = rad.raw[predictors], rad.raw$READMIT~., family = binomial(link = "logit"))
+summary(logit1)
+```
+
+```{r, message=FALSE, warning=FALSE}
+predictions = predict(logit1,type = "response")
+library(InformationValue)
+optCutOff <- optimalCutoff(rad.raw$READMIT, predictions)[1] 
+optCutOff
+```
+
+The next sep is to check the accuracy of the model.
+
+```{r, message=FALSE, warning=FALSE}
+targetVar = ifelse(rad.raw$READMIT == "YES", 1, 0)
+misClassError(targetVar, predictions, threshold = optCutOff)
+plotROC(targetVar, predictions)
+sensitivity(targetVar, predictions, threshold = optCutOff)
+specificity(targetVar, predictions, threshold = optCutOff)
+```
+
