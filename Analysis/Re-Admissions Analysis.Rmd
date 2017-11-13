@@ -2,8 +2,11 @@
 title: "Re-Admissions Analysis"
 author: "Kathleen Sheehan & Abhishek Kanaparthi"
 date: "November 8, 2017"
-output: html_document
+output:
+  word_document: default
+  html_document: default
 ---
+
 The following document elucidates about the in-depth analysis of the Re-Admissions Data and tries to find out the most important factors that are contributing for the Re-admission and also for finding patterns in the data, that will help reduce the number of re-admits.
 
 ```{r, message=FALSE, warning=FALSE}
@@ -56,7 +59,27 @@ summary(rad.raw)
 
 The next step is to work on using one group of variables alone to do the analysis and then the next.
 
-###Optional Group###
+We have to fix upon the most important variables before we jump into the logistic regression on the same.
+
+```{r}
+library(devtools)
+#install_github("riv","tomasgreif")
+#install_github("woe","tomasgreif")
+library(woe)
+library(riv)
+
+iv.mult(rad.raw,"READMIT",summary = TRUE, verbose = TRUE)
+```
+
+
+You can also find the relative significance of the variables from predictor screening in JMP.
+
+![Analysis for just the Rad.raw](R:/People's Projects/Kathleen Sheehan Projects/R- Programming/Readmissions/figures/Rad Raw.JPG)
+
+The further analysis can be done with the usage of the important variables or can also be done with the help of some of the groups of variables to help understand the importance of the variables in a step by step manner, rather than in a whole manner.
+
+The following predictors are choosen just to check a model, which can be developed with the variables with the least number of missing values, just to develop the simplest prototype of the model in case we finalise the most important predictors after the screening analysis.
+
 
 ```{r}
 predictors = c(1, 2:4, 6:11)
@@ -65,24 +88,29 @@ summary(logit1)
 ```
 
 ```{r, message=FALSE, warning=FALSE}
-predictions = predict(logit1,type = "response")
+predictedProb = predict(logit1,type = "response")
 library(InformationValue)
-optCutOff <- optimalCutoff(rad.raw$READMIT, predictions)[1] 
+optCutOff <- optimalCutoff(rad.raw$READMIT, predictedProb)[1] 
 optCutOff
 ```
 
 The next sep is to check the accuracy of the model.
 
 ```{r, message=FALSE, warning=FALSE}
-targetVar = ifelse(rad.raw$READMIT == "YES", 1, 0)
-print(paste("Mis-Class error is :",misClassError(targetVar, predictions, threshold = optCutOff)))
-plotROC(targetVar, predictions)
-sensitivity(targetVar, predictions, threshold = optCutOff)
-specificity(targetVar, predictions, threshold = optCutOff)
+target = ifelse(rad.raw$READMIT == "YES", 1, 0)
+print(paste("Mis-Class error is :",misClassError(target, predictedProb, threshold = optCutOff)))
+#plotROC(target, predictions)
+sensitivity(target, predictedProb, threshold = optCutOff)
+specificity(target, predictedProb, threshold = optCutOff)
 ```
 
 ```{r, message=FALSE, warning=FALSE}
-predicteds = ifelse(predictions > optCutOff, 1, 0)
-ks_plot(actuals=targetVar, predictedScores=predicteds)
+targetRef = rad.raw$READMIT[!is.na(rad.raw$FIN_CLASS)]
+targetRefNum = ifelse(targetRef == "YES", 1, 0)
+targetPredicted = ifelse(predictedProb > optCutOff, 1, 0)
+
+library(caret)
+library(e1071)
+confusionMatrix(data = logit1$y, reference = targetRefNum, positive = "1")
 ```
 
